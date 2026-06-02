@@ -24,6 +24,25 @@ provider "dollarbox" {
   token    = var.dollarbox_token
   org      = "my-org"
 }
+
+resource "dollarbox_container" "web" {
+  name  = "web"
+  image = "nginx:1.27"
+}
+
+resource "dollarbox_volume" "data" {
+  name    = "data"
+  size_gb = 10
+}
+
+resource "dollarbox_invitation" "admin" {
+  email = "admin@example.com"
+  role  = "admin"
+}
+
+resource "dollarbox_kubectl_credential" "current" {}
+
+data "dollarbox_org" "current" {}
 ```
 
 ## Schema

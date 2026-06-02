@@ -78,6 +78,9 @@ func (p *DollarBoxProvider) Configure(
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	if data.Endpoint.IsUnknown() || data.Token.IsUnknown() || data.Org.IsUnknown() {
+		return
+	}
 
 	config := &ClientConfig{Endpoint: defaultEndpoint}
 
@@ -108,21 +111,46 @@ func (p *DollarBoxProvider) Configure(
 	} else if token := strings.TrimSpace(os.Getenv("DOLLARBOX_TOKEN")); token != "" {
 		config.Token = token
 	}
-
-	if !data.Org.IsNull() && !data.Org.IsUnknown() {
-		config.Org = strings.TrimSpace(data.Org.ValueString())
+	if config.Token == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("token"),
+			"Missing Token",
+			"Configure a DollarBox API token with the token attribute or the DOLLARBOX_TOKEN environment variable.",
+		)
+		return
 	}
 
-	resp.DataSourceData = config
-	resp.ResourceData = config
+	if !data.Org.IsNull() && !data.Org.IsUnknown() {
+		org := strings.TrimSpace(data.Org.ValueString())
+		if org == "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("org"),
+				"Invalid Org",
+				"Org must not be empty when it is configured.",
+			)
+			return
+		}
+		config.Org = org
+	}
+
+	client := NewAPIClient(*config)
+	resp.DataSourceData = client
+	resp.ResourceData = client
 }
 
 func (p *DollarBoxProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewContainerResource,
+		NewVolumeResource,
+		NewInvitationResource,
+		NewKubectlCredentialResource,
+	}
 }
 
 func (p *DollarBoxProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewOrgDataSource,
+	}
 }
 
 func New(version string) func() provider.Provider {
