@@ -2,9 +2,8 @@
 
 Official Terraform provider for DollarBox.
 
-This repository uses the Terraform Plugin Framework. The initial scaffold builds
-and validates the provider configuration; resources and data sources will be
-added once the DollarBox public API is available.
+This repository uses the Terraform Plugin Framework. The provider manages
+DollarBox resources through the public API.
 
 ## Requirements
 
@@ -30,9 +29,40 @@ provider "dollarbox" {
   token    = var.dollarbox_token
   org      = "my-org"
 }
+
+resource "dollarbox_container" "web" {
+  name  = "web"
+  image = "nginx:1.27"
+
+  env = {
+    NGINX_PORT = "80"
+  }
+}
+
+resource "dollarbox_volume" "data" {
+  name    = "data"
+  size_gb = 10
+}
+
+resource "dollarbox_invitation" "admin" {
+  email = "admin@example.com"
+  role  = "admin"
+}
+
+resource "dollarbox_kubectl_credential" "current" {}
+
+data "dollarbox_org" "current" {}
 ```
 
 `token` can also be provided with the `DOLLARBOX_TOKEN` environment variable.
+
+## Supported Resources and Data Sources
+
+- `dollarbox_container` manages `/api/v1/containers/` resources.
+- `dollarbox_volume` manages `/api/v1/volumes/` resources.
+- `dollarbox_invitation` manages `/api/v1/invitations/` resources.
+- `dollarbox_kubectl_credential` manages `/api/v1/kubectl-credentials/` resources.
+- `dollarbox_org` reads `/api/v1/orgs/{slug}/` metadata.
 
 ## Development
 
