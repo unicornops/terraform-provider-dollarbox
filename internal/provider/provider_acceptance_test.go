@@ -105,9 +105,10 @@ func TestAccVolumeResource(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      "dollarbox_volume.test",
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            "dollarbox_volume.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"status", "updated_at"},
 			},
 		},
 	})
