@@ -25,7 +25,7 @@ terraform {
 }
 
 provider "dollarbox" {
-  endpoint = "https://dollarbox.io"
+  endpoint = "https://app.dollarbox.dev"
   token    = var.dollarbox_token
   org      = "my-org"
 }
@@ -95,6 +95,10 @@ pre-commit run --hook-stage pre-push --all-files
 - `.github/workflows/build.yml` runs pre-commit, Go formatting, vet, tests,
   golangci-lint, build, and a GoReleaser snapshot on pull requests and pushes
   to `main`.
+- `.github/workflows/acceptance.yml` runs `make testacc` only on pushes to
+  `main` and manual dispatches. It requires `DOLLARBOX_TOKEN` and
+  `DOLLARBOX_ORG` secrets for a dedicated DollarBox test organisation; public
+  pull requests never receive these secrets.
 - `.github/workflows/release.yml` creates signed provider release artifacts when
   a `v*` tag is pushed.
 

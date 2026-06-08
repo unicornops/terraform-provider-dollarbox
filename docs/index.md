@@ -20,7 +20,7 @@ terraform {
 }
 
 provider "dollarbox" {
-  endpoint = "https://dollarbox.io"
+  endpoint = "https://app.dollarbox.dev"
   token    = var.dollarbox_token
   org      = "my-org"
 }
@@ -49,6 +49,6 @@ data "dollarbox_org" "current" {}
 
 ### Optional
 
-- `endpoint` (String) DollarBox API endpoint. Defaults to `https://dollarbox.io`.
+- `endpoint` (String) DollarBox API endpoint. Defaults to `https://app.dollarbox.dev`.
 - `org` (String) Optional DollarBox organisation slug used as the default scope.
 - `token` (String, Sensitive) DollarBox API token. May also be set with `DOLLARBOX_TOKEN`.

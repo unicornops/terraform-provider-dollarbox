@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-const defaultEndpoint = "https://dollarbox.io"
+const defaultEndpoint = "https://app.dollarbox.dev"
 
 var _ provider.Provider = &DollarBoxProvider{}
 
@@ -51,7 +51,7 @@ func (p *DollarBoxProvider) Schema(
 		MarkdownDescription: "The DollarBox provider manages DollarBox resources through the public API.",
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "DollarBox API endpoint. Defaults to `https://dollarbox.io`.",
+				MarkdownDescription: "DollarBox API endpoint. Defaults to `https://app.dollarbox.dev`.",
 				Optional:            true,
 			},
 			"token": schema.StringAttribute{
