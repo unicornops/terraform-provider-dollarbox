@@ -13,7 +13,7 @@ variable "dollarbox_token" {
 }
 
 provider "dollarbox" {
-  endpoint = "https://dollarbox.io"
+  endpoint = "https://app.dollarbox.dev"
   token    = var.dollarbox_token
   org      = "my-org"
 }

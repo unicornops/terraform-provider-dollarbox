@@ -1,0 +1,51 @@
+---
+name: Acceptance
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  acceptance:
+    name: DollarBox Acceptance
+    runs-on: ubuntu-latest
+    environment: dollarbox-acceptance
+    timeout-minutes: 120
+    env:
+      TF_ACC: "1"
+      DOLLARBOX_TOKEN: ${{ secrets.DOLLARBOX_TOKEN }}
+      DOLLARBOX_ORG: ${{ secrets.DOLLARBOX_ORG }}
+      DOLLARBOX_ENDPOINT: ${{ secrets.DOLLARBOX_ENDPOINT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Validate acceptance secrets
+        run: |
+          if [ -z "$DOLLARBOX_TOKEN" ]; then
+            echo "::error::DOLLARBOX_TOKEN secret is required for acceptance tests"
+            exit 1
+          fi
+          if [ -z "$DOLLARBOX_ORG" ]; then
+            echo "::error::DOLLARBOX_ORG secret is required for acceptance tests"
+            exit 1
+          fi
+
+      - name: Run acceptance tests
+        run: make testacc
