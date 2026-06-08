@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -40,6 +41,7 @@ func TestAccOrgDataSource(t *testing.T) {
 
 func TestAccContainerResource(t *testing.T) {
 	testAccSkipUnlessEnabled(t)
+	testAccSkipUnlessBillableResourceEnabled(t, "container")
 
 	name := testAccName("container")
 
@@ -80,6 +82,7 @@ func TestAccContainerResource(t *testing.T) {
 
 func TestAccVolumeResource(t *testing.T) {
 	testAccSkipUnlessEnabled(t)
+	testAccSkipUnlessBillableResourceEnabled(t, "volume")
 
 	name := testAccName("volume")
 
@@ -208,6 +211,58 @@ func testAccSkipUnlessKubectlEnabled() (bool, error) {
 		return false, fmt.Errorf("check kubectl support: %w", err)
 	}
 	return !org.KubectlEnabled, nil
+}
+
+func testAccSkipUnlessBillableResourceEnabled(t *testing.T, resourceName string) {
+	t.Helper()
+
+	testAccPreCheck(t)()
+	client := testAccAPIClient()
+	ctx := context.Background()
+
+	switch resourceName {
+	case "container":
+		container, err := client.CreateContainer(ctx, containerPayload{
+			Name:    testAccName("preflight-container"),
+			Image:   "nginx:1.27",
+			Env:     map[string]string{},
+			Command: []string{},
+		})
+		if err != nil {
+			testAccSkipIfBillingUnavailable(t, resourceName, err)
+			t.Fatalf("check %s acceptance preflight: %v", resourceName, err)
+		}
+		if err := client.DeleteContainer(ctx, fmt.Sprint(container.ID)); err != nil && !isNotFoundError(err) {
+			t.Fatalf("clean up %s acceptance preflight: %v", resourceName, err)
+		}
+	case "volume":
+		volume, err := client.CreateVolume(ctx, volumePayload{
+			Name:   testAccName("preflight-volume"),
+			SizeGB: 10,
+		})
+		if err != nil {
+			testAccSkipIfBillingUnavailable(t, resourceName, err)
+			t.Fatalf("check %s acceptance preflight: %v", resourceName, err)
+		}
+		if err := client.DeleteVolume(ctx, fmt.Sprint(volume.ID)); err != nil && !isNotFoundError(err) {
+			t.Fatalf("clean up %s acceptance preflight: %v", resourceName, err)
+		}
+	default:
+		t.Fatalf("unsupported billable resource preflight %q", resourceName)
+	}
+}
+
+func testAccSkipIfBillingUnavailable(t *testing.T, resourceName string, err error) {
+	t.Helper()
+
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && apiErr.Code == "billing_error" {
+		detail := apiErr.Message
+		if detail == "" {
+			detail = apiErr.Error()
+		}
+		t.Skipf("DollarBox test org cannot create %s resources: %s", resourceName, detail)
+	}
 }
 
 func testAccCheckResourceDestroy(resourceType string, fetch func(context.Context, *APIClient, string) error) resource.TestCheckFunc {
