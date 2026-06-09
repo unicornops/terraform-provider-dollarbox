@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "2f7855199397353b2884677bd6280c23e15bbf30",
+  "release-type": "go",
+  "initial-version": "0.1.0",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "draft": true,
+  "force-tag-creation": true,
+  "changelog-sections": [
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance Improvements"
+    },
+    {
+      "type": "deps",
+      "section": "Dependencies"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation"
+    }
+  ],
+  "packages": {
+    ".": {
+      "package-name": "terraform-provider-dollarbox",
+      "release-type": "go",
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}
