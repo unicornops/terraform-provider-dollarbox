@@ -140,14 +140,17 @@ pre-commit run --hook-stage pre-push --all-files
   `main` and manual dispatches. It requires `DOLLARBOX_TOKEN` and
   `DOLLARBOX_ORG` secrets for a dedicated DollarBox test organisation; public
   pull requests never receive these secrets.
-- `.github/workflows/release.yml` creates signed provider release artifacts when
-  a `v*` tag is pushed.
+- `.github/workflows/release.yml` runs release-please on pushes to `main`. When
+  a release PR is merged, it creates the `v*` tag and GitHub release, then runs
+  GoReleaser to attach signed Terraform Registry-compatible provider artifacts.
 
 ## Releases
 
 Before the first release, create repository secrets named `GPG_PRIVATE_KEY` and
 `PASSPHRASE`. The release workflow imports that key, signs the GoReleaser
-checksum file, and uploads Terraform Registry-compatible assets:
+checksum file, and uploads Terraform Registry-compatible assets. Optionally add a
+`RELEASE_PLEASE_TOKEN` secret from a GitHub App or fine-grained PAT if release PRs
+must trigger required pull request checks:
 
 - provider zip files
 - `terraform-provider-dollarbox_<version>_manifest.json`
@@ -155,5 +158,14 @@ checksum file, and uploads Terraform Registry-compatible assets:
 - `terraform-provider-dollarbox_<version>_SHA256SUMS.sig`
 
 Add the matching public GPG key to the Terraform Registry namespace before
-publishing the provider. Release tags must be valid semantic versions prefixed
-with `v`, for example `v0.1.0`.
+publishing the provider.
+
+Releases are managed by release-please. Merge normal feature and fix PRs to
+`main` using Conventional Commit titles such as `feat(provider): add namespace
+support` or `fix(volume): ignore volatile import fields`. Release-please keeps a
+release PR open with generated `CHANGELOG.md` entries. Merging that release PR
+creates a draft GitHub release and a semantic version tag prefixed with `v`;
+GoReleaser then uploads the signed provider artifacts and publishes the release.
+
+The first release is seeded from `0.0.0` and will publish `v0.1.0` from the
+existing feature history once the first release-please PR is merged.
