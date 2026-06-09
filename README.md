@@ -30,6 +30,12 @@ provider "dollarbox" {
   org      = "my-org"
 }
 
+resource "dollarbox_org" "current" {
+  slug          = "my-org"
+  name          = "My Org"
+  billing_email = "billing@example.com"
+}
+
 resource "dollarbox_container" "web" {
   name  = "web"
   image = "nginx:1.27"
@@ -49,20 +55,55 @@ resource "dollarbox_invitation" "admin" {
   role  = "admin"
 }
 
+resource "dollarbox_member" "admin" {
+  email = "admin@example.com"
+  role  = "admin"
+}
+
+resource "dollarbox_namespace" "dev" {
+  slug                 = "dev"
+  allocated_containers = 2
+  allocated_volume_gb  = 10
+}
+
 resource "dollarbox_kubectl_credential" "current" {}
 
 data "dollarbox_org" "current" {}
+data "dollarbox_containers" "current" {}
+data "dollarbox_volumes" "current" {}
+data "dollarbox_invitations" "current" {}
+data "dollarbox_kubectl_credentials" "current" {}
+data "dollarbox_members" "current" {}
+data "dollarbox_namespaces" "current" {}
+data "dollarbox_orgs" "current" {}
 ```
 
 `token` can also be provided with the `DOLLARBOX_TOKEN` environment variable.
 
 ## Supported Resources and Data Sources
 
+Resources:
+
 - `dollarbox_container` manages `/api/v1/containers/` resources.
 - `dollarbox_volume` manages `/api/v1/volumes/` resources.
 - `dollarbox_invitation` manages `/api/v1/invitations/` resources.
 - `dollarbox_kubectl_credential` manages `/api/v1/kubectl-credentials/` resources.
+- `dollarbox_member` manages accepted organisation members through `/api/v1/members/{id}/`.
+- `dollarbox_namespace` manages `/api/v1/namespaces/` resources.
+- `dollarbox_org` manages existing org settings through `/api/v1/orgs/{slug}/`.
+
+Data sources:
+
+- `dollarbox_containers` lists `/api/v1/containers/` metadata.
+- `dollarbox_volumes` lists `/api/v1/volumes/` metadata.
+- `dollarbox_invitations` lists `/api/v1/invitations/` metadata.
+- `dollarbox_kubectl_credentials` lists `/api/v1/kubectl-credentials/` metadata.
+- `dollarbox_member` reads one member by ID or email.
+- `dollarbox_members` lists `/api/v1/members/` metadata.
+- `dollarbox_namespace` reads one namespace by ID or slug.
+- `dollarbox_namespaces` lists `/api/v1/namespaces/` metadata.
 - `dollarbox_org` reads `/api/v1/orgs/{slug}/` metadata.
+- `dollarbox_orgs` lists `/api/v1/orgs/` metadata.
 
 ## Development
 

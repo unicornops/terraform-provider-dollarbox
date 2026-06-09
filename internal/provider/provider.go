@@ -144,12 +144,24 @@ func (p *DollarBoxProvider) Resources(ctx context.Context) []func() resource.Res
 		NewVolumeResource,
 		NewInvitationResource,
 		NewKubectlCredentialResource,
+		NewMemberResource,
+		NewNamespaceResource,
+		NewOrgResource,
 	}
 }
 
 func (p *DollarBoxProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewOrgDataSource,
+		NewContainersDataSource,
+		NewVolumesDataSource,
+		NewInvitationsDataSource,
+		NewKubectlCredentialsDataSource,
+		NewMemberDataSource,
+		NewMembersDataSource,
+		NewNamespaceDataSource,
+		NewNamespacesDataSource,
+		NewOrgsDataSource,
 	}
 }
 

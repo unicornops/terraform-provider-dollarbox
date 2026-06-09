@@ -25,6 +25,12 @@ provider "dollarbox" {
   org      = "my-org"
 }
 
+resource "dollarbox_org" "current" {
+  slug          = "my-org"
+  name          = "My Org"
+  billing_email = "billing@example.com"
+}
+
 resource "dollarbox_container" "web" {
   name  = "web"
   image = "nginx:1.27"
@@ -40,9 +46,27 @@ resource "dollarbox_invitation" "admin" {
   role  = "admin"
 }
 
+resource "dollarbox_member" "admin" {
+  email = "admin@example.com"
+  role  = "admin"
+}
+
+resource "dollarbox_namespace" "dev" {
+  slug                 = "dev"
+  allocated_containers = 2
+  allocated_volume_gb  = 10
+}
+
 resource "dollarbox_kubectl_credential" "current" {}
 
 data "dollarbox_org" "current" {}
+data "dollarbox_containers" "current" {}
+data "dollarbox_volumes" "current" {}
+data "dollarbox_invitations" "current" {}
+data "dollarbox_kubectl_credentials" "current" {}
+data "dollarbox_members" "current" {}
+data "dollarbox_namespaces" "current" {}
+data "dollarbox_orgs" "current" {}
 ```
 
 ## Schema

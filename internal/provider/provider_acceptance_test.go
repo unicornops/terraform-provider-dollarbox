@@ -39,6 +39,27 @@ func TestAccOrgDataSource(t *testing.T) {
 	})
 }
 
+func TestAccMemberDataSources(t *testing.T) {
+	testAccSkipUnlessEnabled(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 testAccPreCheck(t),
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMemberDataSourcesConfig(),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet("data.dollarbox_members.test", "members.0.id"),
+					resource.TestCheckResourceAttrSet("data.dollarbox_members.test", "members.0.email"),
+					resource.TestCheckResourceAttrSet("data.dollarbox_member.test", "id"),
+					resource.TestCheckResourceAttrSet("data.dollarbox_member.test", "email"),
+					resource.TestCheckResourceAttrSet("data.dollarbox_member.test", "role"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccContainerResource(t *testing.T) {
 	testAccSkipUnlessEnabled(t)
 	testAccSkipUnlessBillableResourceEnabled(t, "container")
@@ -323,6 +344,16 @@ provider "dollarbox" {
 func testAccOrgDataSourceConfig() string {
 	return testAccProviderConfig() + `
 data "dollarbox_org" "test" {}
+`
+}
+
+func testAccMemberDataSourcesConfig() string {
+	return testAccProviderConfig() + `
+data "dollarbox_members" "test" {}
+
+data "dollarbox_member" "test" {
+  id = data.dollarbox_members.test.members[0].id
+}
 `
 }
 
