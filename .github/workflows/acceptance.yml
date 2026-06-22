@@ -27,7 +27,7 @@ jobs:
       DOLLARBOX_ENDPOINT: ${{ secrets.DOLLARBOX_ENDPOINT }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Go
         uses: actions/setup-go@v6
