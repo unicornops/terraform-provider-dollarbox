@@ -147,6 +147,9 @@ func (p *DollarBoxProvider) Resources(ctx context.Context) []func() resource.Res
 		NewMemberResource,
 		NewNamespaceResource,
 		NewOrgResource,
+		NewSnapshotPolicyResource,
+		NewVolumeSnapshotResource,
+		NewSnapshotRestoreResource,
 	}
 }
 
@@ -162,6 +165,8 @@ func (p *DollarBoxProvider) DataSources(ctx context.Context) []func() datasource
 		NewNamespaceDataSource,
 		NewNamespacesDataSource,
 		NewOrgsDataSource,
+		NewVolumeSnapshotDataSource,
+		NewVolumeSnapshotsDataSource,
 	}
 }
 

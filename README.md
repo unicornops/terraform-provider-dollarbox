@@ -68,6 +68,20 @@ resource "dollarbox_namespace" "dev" {
 
 resource "dollarbox_kubectl_credential" "current" {}
 
+resource "dollarbox_snapshot_policy" "data" {
+  namespace_id   = dollarbox_namespace.dev.id
+  pvc_name       = "app-data"
+  retention_days = 7
+}
+
+resource "dollarbox_volume_snapshot" "before_upgrade" {
+  namespace_id = dollarbox_namespace.dev.id
+  pvc_name     = "app-data"
+  name         = "before-upgrade"
+
+  depends_on = [dollarbox_snapshot_policy.data]
+}
+
 data "dollarbox_org" "current" {}
 data "dollarbox_containers" "current" {}
 data "dollarbox_volumes" "current" {}
@@ -76,6 +90,10 @@ data "dollarbox_kubectl_credentials" "current" {}
 data "dollarbox_members" "current" {}
 data "dollarbox_namespaces" "current" {}
 data "dollarbox_orgs" "current" {}
+data "dollarbox_volume_snapshots" "data" {
+  namespace_id = dollarbox_namespace.dev.id
+  pvc_name     = "app-data"
+}
 ```
 
 `token` can also be provided with the `DOLLARBOX_TOKEN` environment variable.
@@ -91,6 +109,9 @@ Resources:
 - `dollarbox_member` manages accepted organisation members through `/api/v1/members/{id}/`.
 - `dollarbox_namespace` manages `/api/v1/namespaces/` resources.
 - `dollarbox_org` manages existing org settings through `/api/v1/orgs/{slug}/`.
+- `dollarbox_snapshot_policy` manages daily snapshot protection for a namespaced Longhorn PVC.
+- `dollarbox_volume_snapshot` manages the single manual snapshot permitted for a protected PVC.
+- `dollarbox_snapshot_restore` restores a ready snapshot into a new PVC; removing it from configuration does not delete that PVC.
 
 Data sources:
 
@@ -104,6 +125,10 @@ Data sources:
 - `dollarbox_namespaces` lists `/api/v1/namespaces/` metadata.
 - `dollarbox_org` reads `/api/v1/orgs/{slug}/` metadata.
 - `dollarbox_orgs` lists `/api/v1/orgs/` metadata.
+- `dollarbox_volume_snapshot` reads one manual or managed snapshot by UUID.
+- `dollarbox_volume_snapshots` lists all manual and managed snapshots for a PVC.
+
+Snapshot protection costs €0.10 per protected source GB per month. Billing uses the source PVC capacity, not physical snapshot bytes. Charges increase before protection activates and decrease only after retained CSI snapshots have been deleted.
 
 ## Development
 
@@ -140,6 +165,11 @@ pre-commit run --hook-stage pre-push --all-files
   `main` and manual dispatches. It requires `DOLLARBOX_TOKEN` and
   `DOLLARBOX_ORG` secrets for a dedicated DollarBox test organisation; public
   pull requests never receive these secrets.
+  Snapshot acceptance tests additionally require `DOLLARBOX_SNAPSHOT_TESTS=1`,
+  `DOLLARBOX_SNAPSHOT_NAMESPACE_ID`, and `DOLLARBOX_SNAPSHOT_PVC_NAME` for a
+  bound Longhorn PVC. Restore acceptance remains disabled unless
+  `DOLLARBOX_SNAPSHOT_RESTORE_TESTS=1` because it intentionally leaves the
+  restored PVC in a disposable namespace.
 - `.github/workflows/release.yml` runs release-please on pushes to `main`. When
   a release PR is merged, it creates the `v*` tag and GitHub release, then runs
   GoReleaser to attach signed Terraform Registry-compatible provider artifacts.

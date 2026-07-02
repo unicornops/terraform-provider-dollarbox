@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -206,6 +207,107 @@ func TestAccKubectlCredentialResource(t *testing.T) {
 	})
 }
 
+func TestAccSnapshotPolicyAndVolumeSnapshot(t *testing.T) {
+	testAccSkipUnlessEnabled(t)
+	namespaceID, pvcName := testAccSnapshotFixture(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 testAccPreCheck(t),
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		CheckDestroy: func(state *terraform.State) error {
+			client := testAccAPIClient()
+			ctx := context.Background()
+			for _, rs := range state.RootModule().Resources {
+				if rs.Primary == nil {
+					continue
+				}
+				switch rs.Type {
+				case "dollarbox_snapshot_policy":
+					policy, err := client.GetSnapshotPolicy(ctx, namespaceID, pvcName)
+					if err != nil && !isNotFoundError(err) {
+						return fmt.Errorf("check snapshot policy destroy: %w", err)
+					}
+					if err == nil && policy.Status != "disabled" {
+						return fmt.Errorf("snapshot policy still has status %q", policy.Status)
+					}
+				case "dollarbox_volume_snapshot":
+					snapshot, err := client.GetVolumeSnapshot(ctx, namespaceID, pvcName, rs.Primary.ID)
+					if err != nil && !isNotFoundError(err) {
+						return fmt.Errorf("check volume snapshot destroy: %w", err)
+					}
+					if err == nil && snapshot.Status != "deleted" {
+						return fmt.Errorf("volume snapshot still has status %q", snapshot.Status)
+					}
+				}
+			}
+			return nil
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSnapshotConfig(namespaceID, pvcName, 7, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("dollarbox_snapshot_policy.test", "retention_days", "7"),
+					resource.TestCheckResourceAttr("dollarbox_snapshot_policy.test", "status", "active"),
+					resource.TestCheckResourceAttrSet("dollarbox_snapshot_policy.test", "billed_gb"),
+				),
+			},
+			{
+				Config: testAccSnapshotConfig(namespaceID, pvcName, 5, true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("dollarbox_snapshot_policy.test", "retention_days", "5"),
+					resource.TestCheckResourceAttr("dollarbox_volume_snapshot.test", "name", "terraform-acceptance"),
+					resource.TestCheckResourceAttr("dollarbox_volume_snapshot.test", "labels.managed-by", "terraform"),
+					resource.TestCheckResourceAttr("dollarbox_volume_snapshot.test", "kind", "manual"),
+					resource.TestCheckResourceAttr("dollarbox_volume_snapshot.test", "status", "ready"),
+					resource.TestCheckResourceAttrSet("data.dollarbox_volume_snapshot.test", "id"),
+					resource.TestCheckResourceAttrSet("data.dollarbox_volume_snapshots.test", "snapshots.0.id"),
+				),
+			},
+			{
+				ResourceName:            "dollarbox_snapshot_policy.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"status", "next_snapshot_at", "last_snapshot_at", "updated_at"},
+			},
+			{
+				ResourceName: "dollarbox_volume_snapshot.test",
+				ImportState:  true,
+				ImportStateIdFunc: func(state *terraform.State) (string, error) {
+					rs, ok := state.RootModule().Resources["dollarbox_volume_snapshot.test"]
+					if !ok || rs.Primary == nil {
+						return "", errors.New("volume snapshot state not found")
+					}
+					return fmt.Sprintf("%s/%s/%s", namespaceID, pvcName, rs.Primary.ID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"status", "updated_at"},
+			},
+		},
+	})
+}
+
+func TestAccSnapshotRestore(t *testing.T) {
+	testAccSkipUnlessEnabled(t)
+	if strings.TrimSpace(os.Getenv("DOLLARBOX_SNAPSHOT_RESTORE_TESTS")) != "1" {
+		t.Skip("snapshot restore acceptance test creates a retained PVC; set DOLLARBOX_SNAPSHOT_RESTORE_TESTS=1 only in a disposable namespace")
+	}
+	namespaceID, pvcName := testAccSnapshotFixture(t)
+	targetPVCName := testAccName("restore")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 testAccPreCheck(t),
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{{
+			Config: testAccSnapshotRestoreConfig(namespaceID, pvcName, targetPVCName),
+			Check: resource.ComposeAggregateTestCheckFunc(
+				resource.TestCheckResourceAttr("dollarbox_snapshot_restore.test", "target_pvc_name", targetPVCName),
+				resource.TestCheckResourceAttr("dollarbox_snapshot_restore.test", "status", "bound"),
+				resource.TestCheckResourceAttrSet("dollarbox_snapshot_restore.test", "id"),
+			),
+		}},
+	})
+}
+
 func testAccSkipUnlessEnabled(t *testing.T) {
 	t.Helper()
 
@@ -233,6 +335,22 @@ func testAccSkipUnlessKubectlEnabled() (bool, error) {
 		return false, fmt.Errorf("check kubectl support: %w", err)
 	}
 	return !org.KubectlEnabled, nil
+}
+
+func testAccSnapshotFixture(t *testing.T) (string, string) {
+	t.Helper()
+	if strings.TrimSpace(os.Getenv("DOLLARBOX_SNAPSHOT_TESTS")) != "1" {
+		t.Skip("snapshot acceptance tests are billable; set DOLLARBOX_SNAPSHOT_TESTS=1 to enable them")
+	}
+	namespaceID := strings.TrimSpace(os.Getenv("DOLLARBOX_SNAPSHOT_NAMESPACE_ID"))
+	pvcName := strings.TrimSpace(os.Getenv("DOLLARBOX_SNAPSHOT_PVC_NAME"))
+	if namespaceID == "" || pvcName == "" {
+		t.Fatal("DOLLARBOX_SNAPSHOT_NAMESPACE_ID and DOLLARBOX_SNAPSHOT_PVC_NAME must identify a bound Longhorn PVC")
+	}
+	if _, err := strconv.ParseInt(namespaceID, 10, 64); err != nil {
+		t.Fatalf("DOLLARBOX_SNAPSHOT_NAMESPACE_ID must be an integer: %v", err)
+	}
+	return namespaceID, pvcName
 }
 
 func testAccSkipUnlessBillableResourceEnabled(t *testing.T, resourceName string) {
@@ -388,6 +506,53 @@ func testAccKubectlCredentialResourceConfig() string {
 	return testAccProviderConfig() + `
 resource "dollarbox_kubectl_credential" "test" {}
 `
+}
+
+func testAccSnapshotConfig(namespaceID, pvcName string, retentionDays int, includeSnapshot bool) string {
+	config := testAccProviderConfig() + fmt.Sprintf(`
+resource "dollarbox_snapshot_policy" "test" {
+  namespace_id   = %[1]s
+  pvc_name       = %[2]q
+  retention_days = %[3]d
+}
+`, namespaceID, pvcName, retentionDays)
+	if !includeSnapshot {
+		return config
+	}
+	return config + fmt.Sprintf(`
+resource "dollarbox_volume_snapshot" "test" {
+  namespace_id = %[1]s
+  pvc_name     = %[2]q
+  name         = "terraform-acceptance"
+  labels = {
+    managed-by = "terraform"
+  }
+  depends_on = [dollarbox_snapshot_policy.test]
+}
+
+data "dollarbox_volume_snapshot" "test" {
+  namespace_id = %[1]s
+  pvc_name     = %[2]q
+  id           = dollarbox_volume_snapshot.test.id
+}
+
+data "dollarbox_volume_snapshots" "test" {
+  namespace_id = %[1]s
+  pvc_name     = %[2]q
+  depends_on   = [dollarbox_volume_snapshot.test]
+}
+`, namespaceID, pvcName)
+}
+
+func testAccSnapshotRestoreConfig(namespaceID, pvcName, targetPVCName string) string {
+	return testAccSnapshotConfig(namespaceID, pvcName, 7, true) + fmt.Sprintf(`
+resource "dollarbox_snapshot_restore" "test" {
+  namespace_id    = %[1]s
+  source_pvc_name = %[2]q
+  snapshot_id     = dollarbox_volume_snapshot.test.id
+  target_pvc_name = %[3]q
+}
+`, namespaceID, pvcName, targetPVCName)
 }
 
 func testAccName(prefix string) string {
