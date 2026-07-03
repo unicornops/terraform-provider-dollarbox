@@ -25,10 +25,6 @@ jobs:
       DOLLARBOX_TOKEN: ${{ secrets.DOLLARBOX_TOKEN }}
       DOLLARBOX_ORG: ${{ secrets.DOLLARBOX_ORG }}
       DOLLARBOX_ENDPOINT: ${{ secrets.DOLLARBOX_ENDPOINT }}
-      DOLLARBOX_SNAPSHOT_TESTS: ${{ secrets.DOLLARBOX_SNAPSHOT_TESTS }}
-      DOLLARBOX_SNAPSHOT_NAMESPACE_ID: ${{ secrets.DOLLARBOX_SNAPSHOT_NAMESPACE_ID }}
-      DOLLARBOX_SNAPSHOT_PVC_NAME: ${{ secrets.DOLLARBOX_SNAPSHOT_PVC_NAME }}
-      DOLLARBOX_SNAPSHOT_RESTORE_TESTS: ${{ secrets.DOLLARBOX_SNAPSHOT_RESTORE_TESTS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -39,6 +35,9 @@ jobs:
           go-version-file: go.mod
           cache: true
           cache-dependency-path: go.sum
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
 
       - name: Validate acceptance secrets
         run: |

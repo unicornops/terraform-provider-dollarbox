@@ -165,11 +165,10 @@ pre-commit run --hook-stage pre-push --all-files
   `main` and manual dispatches. It requires `DOLLARBOX_TOKEN` and
   `DOLLARBOX_ORG` secrets for a dedicated DollarBox test organisation; public
   pull requests never receive these secrets.
-  Snapshot acceptance tests additionally require `DOLLARBOX_SNAPSHOT_TESTS=1`,
-  `DOLLARBOX_SNAPSHOT_NAMESPACE_ID`, and `DOLLARBOX_SNAPSHOT_PVC_NAME` for a
-  bound Longhorn PVC. Restore acceptance remains disabled unless
-  `DOLLARBOX_SNAPSHOT_RESTORE_TESTS=1` because it intentionally leaves the
-  restored PVC in a disposable namespace.
+  Snapshot acceptance tests use those same credentials to create a temporary
+  child namespace, kubectl credential, Longhorn PVC, snapshots, and restored
+  PVC. The fixture deletes all of them after the test; the acceptance org must
+  have kubectl access enabled and at least 2 GB of unallocated storage.
 - `.github/workflows/release.yml` runs release-please on pushes to `main`. When
   a release PR is merged, it creates the `v*` tag and GitHub release, then runs
   GoReleaser to attach signed Terraform Registry-compatible provider artifacts.
