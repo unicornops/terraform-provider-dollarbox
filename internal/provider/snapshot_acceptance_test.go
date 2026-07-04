@@ -106,7 +106,7 @@ func newSnapshotAcceptanceFixture(t *testing.T) snapshotAcceptanceFixture {
 	ctx, cancel := context.WithTimeout(context.Background(), snapshotAcceptanceTimeout)
 	defer cancel()
 	namespace, err := client.CreateNamespace(ctx, namespacePayload{
-		Slug:                strings.ToLower(testAccName("snapshots")),
+		Slug:                strings.ToLower(testAccName("snap")),
 		AllocatedContainers: 0,
 		AllocatedVolumeGB:   2,
 	})
