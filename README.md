@@ -168,7 +168,8 @@ pre-commit run --hook-stage pre-push --all-files
   Snapshot acceptance tests use those same credentials to create a temporary
   child namespace, kubectl credential, Longhorn PVC, snapshots, and restored
   PVC. The fixture deletes all of them after the test; the acceptance org must
-  have kubectl access enabled and at least 2 GB of unallocated storage.
+  have kubectl access enabled, one unallocated container slot, and at least 2
+  GB of unallocated storage.
 - `.github/workflows/release.yml` runs release-please on pushes to `main`. When
   a release PR is merged, it creates the `v*` tag and GitHub release, then runs
   GoReleaser to attach signed Terraform Registry-compatible provider artifacts.
