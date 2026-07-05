@@ -36,6 +36,9 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
       - name: Validate acceptance secrets
         run: |
           if [ -z "$DOLLARBOX_TOKEN" ]; then

@@ -11,7 +11,9 @@ import (
 	frameworkdatasource "github.com/hashicorp/terraform-plugin-framework/datasource"
 	frameworkprovider "github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	frameworkresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
 
 func TestProviderMetadata(t *testing.T) {
@@ -61,10 +63,26 @@ func TestProviderSchema(t *testing.T) {
 	}
 }
 
+func TestProviderProtocolSchemasAreValid(t *testing.T) {
+	server, err := providerserver.NewProtocol6WithError(New("test")())()
+	if err != nil {
+		t.Fatalf("create provider server: %v", err)
+	}
+	resp, err := server.GetProviderSchema(context.Background(), &tfprotov6.GetProviderSchemaRequest{})
+	if err != nil {
+		t.Fatalf("get provider schema: %v", err)
+	}
+	for _, diagnostic := range resp.Diagnostics {
+		if diagnostic.Severity == tfprotov6.DiagnosticSeverityError {
+			t.Errorf("provider schema error: %s: %s", diagnostic.Summary, diagnostic.Detail)
+		}
+	}
+}
+
 func TestProviderResources(t *testing.T) {
 	resources := New("test")().Resources(context.Background())
-	if len(resources) != 7 {
-		t.Fatalf("expected 7 resources, got %d", len(resources))
+	if len(resources) != 10 {
+		t.Fatalf("expected 10 resources, got %d", len(resources))
 	}
 
 	typeNames := map[string]bool{}
@@ -73,7 +91,7 @@ func TestProviderResources(t *testing.T) {
 		newResource().Metadata(context.Background(), frameworkresource.MetadataRequest{ProviderTypeName: "dollarbox"}, resp)
 		typeNames[resp.TypeName] = true
 	}
-	for _, expected := range []string{"dollarbox_container", "dollarbox_volume", "dollarbox_invitation", "dollarbox_kubectl_credential", "dollarbox_member", "dollarbox_namespace", "dollarbox_org"} {
+	for _, expected := range []string{"dollarbox_container", "dollarbox_volume", "dollarbox_invitation", "dollarbox_kubectl_credential", "dollarbox_member", "dollarbox_namespace", "dollarbox_org", "dollarbox_snapshot_policy", "dollarbox_volume_snapshot", "dollarbox_snapshot_restore"} {
 		if !typeNames[expected] {
 			t.Fatalf("expected resource %s to be registered", expected)
 		}
@@ -82,8 +100,8 @@ func TestProviderResources(t *testing.T) {
 
 func TestProviderDataSources(t *testing.T) {
 	dataSources := New("test")().DataSources(context.Background())
-	if len(dataSources) != 10 {
-		t.Fatalf("expected 10 data sources, got %d", len(dataSources))
+	if len(dataSources) != 12 {
+		t.Fatalf("expected 12 data sources, got %d", len(dataSources))
 	}
 
 	typeNames := map[string]bool{}
@@ -92,7 +110,7 @@ func TestProviderDataSources(t *testing.T) {
 		newDataSource().Metadata(context.Background(), frameworkdatasource.MetadataRequest{ProviderTypeName: "dollarbox"}, resp)
 		typeNames[resp.TypeName] = true
 	}
-	for _, expected := range []string{"dollarbox_org", "dollarbox_containers", "dollarbox_volumes", "dollarbox_invitations", "dollarbox_kubectl_credentials", "dollarbox_member", "dollarbox_members", "dollarbox_namespace", "dollarbox_namespaces", "dollarbox_orgs"} {
+	for _, expected := range []string{"dollarbox_org", "dollarbox_containers", "dollarbox_volumes", "dollarbox_invitations", "dollarbox_kubectl_credentials", "dollarbox_member", "dollarbox_members", "dollarbox_namespace", "dollarbox_namespaces", "dollarbox_orgs", "dollarbox_volume_snapshot", "dollarbox_volume_snapshots"} {
 		if !typeNames[expected] {
 			t.Fatalf("expected data source %s to be registered", expected)
 		}

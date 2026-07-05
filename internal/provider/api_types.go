@@ -112,6 +112,61 @@ type namespacePayload struct {
 	AllocatedVolumeGB   int64  `json:"allocated_volume_gb"`
 }
 
+type apiSnapshotPolicy struct {
+	PVCName          string  `json:"pvc_name"`
+	RetentionDays    int64   `json:"retention_days"`
+	ProtectedGB      int64   `json:"protected_gb"`
+	BilledGB         int64   `json:"billed_gb"`
+	MonthlyCostCents int64   `json:"monthly_cost_cents"`
+	Status           string  `json:"status"`
+	NextSnapshotAt   *string `json:"next_snapshot_at"`
+	LastSnapshotAt   *string `json:"last_snapshot_at"`
+	Error            string  `json:"error"`
+	CreatedAt        string  `json:"created_at"`
+	UpdatedAt        string  `json:"updated_at"`
+}
+
+type snapshotPolicyPayload struct {
+	RetentionDays int64 `json:"retention_days"`
+}
+
+type apiVolumeSnapshot struct {
+	ID               string            `json:"id"`
+	Kind             string            `json:"kind"`
+	Name             string            `json:"name"`
+	Labels           map[string]string `json:"labels"`
+	Status           string            `json:"status"`
+	RestoreSizeBytes *int64            `json:"restore_size_bytes"`
+	ReadyAt          *string           `json:"ready_at"`
+	Error            string            `json:"error"`
+	CreatedAt        string            `json:"created_at"`
+	UpdatedAt        string            `json:"updated_at"`
+}
+
+type snapshotCreatePayload struct {
+	Name   string            `json:"name,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
+}
+
+type paginatedVolumeSnapshotList struct {
+	Next    string              `json:"next"`
+	Results []apiVolumeSnapshot `json:"results"`
+}
+
+type apiSnapshotRestore struct {
+	ID         string `json:"id"`
+	SnapshotID string `json:"snapshot_id"`
+	PVCName    string `json:"pvc_name"`
+	Status     string `json:"status"`
+	Error      string `json:"error"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+}
+
+type snapshotRestorePayload struct {
+	PVCName string `json:"pvc_name"`
+}
+
 type paginatedContainerList struct {
 	Next    string         `json:"next"`
 	Results []apiContainer `json:"results"`
@@ -410,4 +465,91 @@ func (c *APIClient) UpdateNamespace(ctx context.Context, id string, payload name
 
 func (c *APIClient) DeleteNamespace(ctx context.Context, id string) error {
 	return c.do(ctx, http.MethodDelete, fmt.Sprintf("%s/namespaces/%s/", apiBasePath, url.PathEscape(id)), nil, nil)
+}
+
+func snapshotVolumePath(namespaceID, pvcName string) string {
+	return fmt.Sprintf(
+		"%s/namespaces/%s/volumes/%s",
+		apiBasePath,
+		url.PathEscape(namespaceID),
+		url.PathEscape(pvcName),
+	)
+}
+
+func (c *APIClient) GetSnapshotPolicy(ctx context.Context, namespaceID, pvcName string) (apiSnapshotPolicy, error) {
+	var policy apiSnapshotPolicy
+	err := c.do(ctx, http.MethodGet, snapshotVolumePath(namespaceID, pvcName)+"/snapshot-policy/", nil, &policy)
+	return policy, err
+}
+
+func (c *APIClient) PutSnapshotPolicy(ctx context.Context, namespaceID, pvcName string, payload snapshotPolicyPayload) (apiSnapshotPolicy, error) {
+	var policy apiSnapshotPolicy
+	err := c.do(ctx, http.MethodPut, snapshotVolumePath(namespaceID, pvcName)+"/snapshot-policy/", payload, &policy)
+	return policy, err
+}
+
+func (c *APIClient) DeleteSnapshotPolicy(ctx context.Context, namespaceID, pvcName string) (apiSnapshotPolicy, error) {
+	var policy apiSnapshotPolicy
+	err := c.do(ctx, http.MethodDelete, snapshotVolumePath(namespaceID, pvcName)+"/snapshot-policy/", nil, &policy)
+	return policy, err
+}
+
+func (c *APIClient) ListVolumeSnapshots(ctx context.Context, namespaceID, pvcName string) ([]apiVolumeSnapshot, error) {
+	path := snapshotVolumePath(namespaceID, pvcName) + "/snapshots/"
+	snapshots := []apiVolumeSnapshot{}
+	for path != "" {
+		var page paginatedVolumeSnapshotList
+		if err := c.do(ctx, http.MethodGet, path, nil, &page); err != nil {
+			return nil, err
+		}
+		snapshots = append(snapshots, page.Results...)
+		path = nextPagePath(page.Next)
+	}
+	return snapshots, nil
+}
+
+func (c *APIClient) CreateVolumeSnapshot(ctx context.Context, namespaceID, pvcName string, payload snapshotCreatePayload) (apiVolumeSnapshot, error) {
+	var snapshot apiVolumeSnapshot
+	err := c.do(ctx, http.MethodPost, snapshotVolumePath(namespaceID, pvcName)+"/snapshots/", payload, &snapshot)
+	return snapshot, err
+}
+
+func (c *APIClient) GetVolumeSnapshot(ctx context.Context, namespaceID, pvcName, snapshotID string) (apiVolumeSnapshot, error) {
+	var snapshot apiVolumeSnapshot
+	err := c.do(ctx, http.MethodGet, fmt.Sprintf(
+		"%s/snapshots/%s/",
+		snapshotVolumePath(namespaceID, pvcName),
+		url.PathEscape(snapshotID),
+	), nil, &snapshot)
+	return snapshot, err
+}
+
+func (c *APIClient) DeleteVolumeSnapshot(ctx context.Context, namespaceID, pvcName, snapshotID string) (apiVolumeSnapshot, error) {
+	var snapshot apiVolumeSnapshot
+	err := c.do(ctx, http.MethodDelete, fmt.Sprintf(
+		"%s/snapshots/%s/",
+		snapshotVolumePath(namespaceID, pvcName),
+		url.PathEscape(snapshotID),
+	), nil, &snapshot)
+	return snapshot, err
+}
+
+func (c *APIClient) CreateSnapshotRestore(ctx context.Context, namespaceID, sourcePVCName, snapshotID string, payload snapshotRestorePayload) (apiSnapshotRestore, error) {
+	var restore apiSnapshotRestore
+	err := c.do(ctx, http.MethodPost, fmt.Sprintf(
+		"%s/snapshots/%s/restore/",
+		snapshotVolumePath(namespaceID, sourcePVCName),
+		url.PathEscape(snapshotID),
+	), payload, &restore)
+	return restore, err
+}
+
+func (c *APIClient) GetSnapshotRestore(ctx context.Context, namespaceID, sourcePVCName, restoreID string) (apiSnapshotRestore, error) {
+	var restore apiSnapshotRestore
+	err := c.do(ctx, http.MethodGet, fmt.Sprintf(
+		"%s/snapshot-restores/%s/",
+		snapshotVolumePath(namespaceID, sourcePVCName),
+		url.PathEscape(restoreID),
+	), nil, &restore)
+	return restore, err
 }
