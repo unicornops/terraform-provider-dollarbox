@@ -37,7 +37,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
 
       - name: Validate acceptance secrets
         run: |
