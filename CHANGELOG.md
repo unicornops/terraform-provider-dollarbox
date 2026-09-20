@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/unicornops/terraform-provider-dollarbox/compare/v0.2.0...v0.2.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **release:** correct GPG signing key for registry verification ([7c7489a](https://github.com/unicornops/terraform-provider-dollarbox/commit/7c7489a8277c9ab6b69be681b13a76951176c513))
+
 ## [0.2.0](https://github.com/unicornops/terraform-provider-dollarbox/compare/v0.1.0...v0.2.0) (2026-08-18)
 
 
