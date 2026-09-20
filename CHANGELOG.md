@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/unicornops/terraform-provider-dollarbox/compare/v0.2.1...v0.2.2) (2026-09-20)
+
+
+### Bug Fixes
+
+* **release:** use loopback pinentry for non-interactive GPG signing ([4819415](https://github.com/unicornops/terraform-provider-dollarbox/commit/4819415dd3e9c75dbff949ef88412cd0f42e8a0f))
+
 ## [0.2.1](https://github.com/unicornops/terraform-provider-dollarbox/compare/v0.2.0...v0.2.1) (2026-09-20)
 
 
