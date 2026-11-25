@@ -245,8 +245,11 @@ func testAccSkipUnlessBillableResourceEnabled(t *testing.T, resourceName string)
 	switch resourceName {
 	case "container":
 		container, err := client.CreateContainer(ctx, containerPayload{
-			Name:    testAccName("preflight-container"),
-			Image:   "nginx:1.27",
+			Name: testAccName("preflight-container"),
+			// whoami runs fine on the platform's read-only rootfs; nginx
+			// crashloops without writable /var/cache/nginx and would page
+			// operators if a run died before the delete below.
+			Image:   "traefik/whoami:v1.12.0",
 			Env:     map[string]string{},
 			Command: []string{},
 		})
@@ -254,6 +257,12 @@ func testAccSkipUnlessBillableResourceEnabled(t *testing.T, resourceName string)
 			testAccSkipIfBillingUnavailable(t, resourceName, err)
 			t.Fatalf("check %s acceptance preflight: %v", resourceName, err)
 		}
+		// Backstop: if this test is interrupted between create and the
+		// immediate delete (CI timeout/kill), the container must still be
+		// removed so it cannot linger as a crashlooping workload.
+		t.Cleanup(func() {
+			_ = client.DeleteContainer(context.Background(), fmt.Sprint(container.ID))
+		})
 		if err := client.DeleteContainer(ctx, fmt.Sprint(container.ID)); err != nil && !isNotFoundError(err) {
 			t.Fatalf("clean up %s acceptance preflight: %v", resourceName, err)
 		}
@@ -266,6 +275,9 @@ func testAccSkipUnlessBillableResourceEnabled(t *testing.T, resourceName string)
 			testAccSkipIfBillingUnavailable(t, resourceName, err)
 			t.Fatalf("check %s acceptance preflight: %v", resourceName, err)
 		}
+		t.Cleanup(func() {
+			_ = client.DeleteVolume(context.Background(), fmt.Sprint(volume.ID))
+		})
 		if err := client.DeleteVolume(ctx, fmt.Sprint(volume.ID)); err != nil && !isNotFoundError(err) {
 			t.Fatalf("clean up %s acceptance preflight: %v", resourceName, err)
 		}
