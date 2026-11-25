@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/unicornops/terraform-provider-dollarbox/compare/v0.2.2...v0.2.3) (2026-11-25)
+
+
+### Bug Fixes
+
+* **tests:** preflight uses read-only-safe image and t.Cleanup backstop ([#1](https://github.com/unicornops/terraform-provider-dollarbox/issues/1)) ([69e9bcf](https://github.com/unicornops/terraform-provider-dollarbox/commit/69e9bcffe50645dd61d81f8ff6dcb80889121ed5))
+
 ## [0.2.2](https://github.com/unicornops/terraform-provider-dollarbox/compare/v0.2.1...v0.2.2) (2026-09-20)
 
 
